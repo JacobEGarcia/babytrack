@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BABYTRACK - motion tracery</title>
+<style>
+:root{--bg:#0c0e0f;--panel:#141618;--panel2:#1b1e20;--line:#26292c;--txt:#d7d9db;--dim:#8a8f94;--accent:#e8e24a;--white:#f2f3f4;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;overflow:hidden;}
+.app{display:flex;height:100vh;}
+.side{width:264px;min-width:264px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:thin;}
+.logo{padding:14px 14px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;}
+.logo h1{font-size:21px;letter-spacing:2px;font-weight:900;text-transform:uppercase;transform:scaleY(1.15);color:var(--white);}
+.logo .gear{color:var(--dim);font-size:16px;}
+.nav{display:flex;gap:14px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:10px;color:var(--dim);letter-spacing:1px;}
+.nav span{cursor:pointer;}.nav span:hover{color:var(--white);}
+.sect{padding:12px 14px;border-bottom:1px solid var(--line);}
+.sect h2{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+.note{font-size:10px;line-height:1.5;background:var(--panel2);border:1px solid var(--line);padding:8px 10px;border-radius:4px;margin-bottom:10px;}
+.btnrow{display:flex;gap:8px;margin-bottom:8px;}
+.btn{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--txt);font:inherit;font-size:11px;padding:8px 6px;border-radius:4px;cursor:pointer;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;}
+.btn:hover{border-color:#3a3e42;color:var(--white);}
+.btn.on{background:#262a2d;color:var(--white);border-color:#4a4f54;}
+.btn:disabled{opacity:.35;cursor:default;}
+.tagpro{font-size:8px;background:var(--accent);color:#111;padding:1px 4px;border-radius:2px;font-weight:700;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.fxbtns{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.slider{display:flex;align-items:center;gap:10px;margin:6px 0;}
+.slider input{flex:1;accent-color:var(--white);}
+.slider .val{font-size:10px;color:var(--dim);width:44px;text-align:right;}
+.stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;background:#0a0c0d;}
+canvas#view{max-width:calc(100% - 32px);max-height:calc(100% - 32px);background:#000;}
+.topbtns{position:absolute;top:14px;right:16px;display:flex;gap:8px;}
+.cbtn{width:34px;height:34px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;}
+.cbtn:hover{color:var(--white);border-color:#3a3e42;}
+.tips{position:absolute;bottom:14px;left:16px;font-size:10px;letter-spacing:1px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);padding:6px 12px;border-radius:20px;cursor:pointer;}
+.wm{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.05;z-index:5;}
+.wm span{position:absolute;font-size:15px;color:#fff;transform:rotate(-30deg);letter-spacing:3px;white-space:nowrap;}
+#fileInput{display:none;}
+.status{position:absolute;top:14px;left:16px;font-size:10px;color:var(--dim);letter-spacing:1px;}
+@media (max-width:760px){
+.app{flex-direction:column;}.side{width:100%;min-width:0;max-height:46vh;border-right:none;border-bottom:1px solid var(--line);}
+.stage{min-height:54vh;}canvas#view{max-width:96%;max-height:96%;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="side">
+    <div class="logo"><h1>BABYTRACK</h1><span class="gear">&#9881;</span></div>
+    <div class="nav"><span>&#8962;</span><span>&#8635;</span><span>LOGIN</span><span>PRICING</span><span>CONTACT</span></div>
+    <div class="sect">
+      <div class="note">If you don't want to track the background (static background), try MotionTrack</div>
+      <div class="btnrow">
+        <button class="btn" id="uploadBtn">&#8679; Upload Video</button>
+        <button class="btn" id="camBtn">&#9673; Open Camera</button>
+      </div>
+      <div class="btnrow">
+        <button class="btn" id="demoBtn">&#9654; Demo Clip</button>
+        <button class="btn" id="exportBtn">&#8681; Export WebM</button>
+      </div>
+      <div class="btnrow">
+        <button class="btn" id="hqBtn" disabled>&#8681; High-Quality Export <span class="tagpro">PRO</span></button>
+      </div>
+    </div>
+    <div class="sect">
+      <h2>&#9193; Video Speed</h2>
+      <div class="grid4">
+        <button class="btn spd on" data-s="1">1X</button><button class="btn spd" data-s="2">2X</button>
+        <button class="btn spd" data-s="3">3X</button><button class="btn spd" data-s="4">4X</button>
+      </div>
+    </div>
+    <div class="sect">
+      <h2>&#8857; Shape</h2>
+      <div class="grid3">
+        <button class="btn shape on" data-sh="square">&#9634;</button>
+        <button class="btn shape" data-sh="circle">&#9675;</button>
+        <button class="btn shape" data-sh="custom">&#11039;</button>
+      </div>
+    </div>
+    <div class="sect">
+      <h2>&#10711; Region Style <span style="margin-left:auto"><span class="tagpro">PRO</span></span></h2>
+      <div style="font-size:9px;color:var(--dim);margin-bottom:6px;">Basic Effects</div>
+      <div class="fxbtns">
+        <button class="btn fx on" data-fx="basic">Basic</button><button class="btn fx" data-fx="cross">Cross</button>
+        <button class="btn fx" data-fx="label">Label</button><button class="btn fx" data-fx="frame">Frame</button>
+        <button class="btn fx" data-fx="lframe">L-Frame</button><button class="btn fx" data-fx="xframe">X-Frame</button>
+        <button class="btn fx" data-fx="grid">Grid</button><button class="btn fx" data-fx="particle">Particle</button>
+        <button class="btn fx" data-fx="dash">Dash</button><button class="btn fx" data-fx="scope">Scope</button>
+        <button class="btn fx" data-fx="win2k">Win2K</button><button class="btn fx" data-fx="label2">Label 2</button>
+        <button class="btn fx" data-fx="glow">Glow</button><button class="btn fx" data-fx="backdrop">Backdrop</button>
+      </div>
+    </div>
+    <div class="sect">
+      <h2>Filter Effects</h2>
+      <div class="btnrow">
+        <button class="btn filt" data-fl="invert">Invert</button>
+        <button class="btn filt" data-fl="fusion">Fusion</button>
+      </div>
+      <div class="slider"><span style="font-size:10px;color:var(--dim)">Threshold</span>
+        <input type="range" id="thresh" min="10" max="80" value="34"><span class="val" id="threshVal">34</span></div>
+      <div class="slider"><span style="font-size:10px;color:var(--dim)">Max regions</span>
+        <input type="range" id="maxr" min="2" max="14" value="8"><span class="val" id="maxrVal">8</span></div>
+    </div>
+  </div>
+  <div class="stage">
+    <canvas id="view" width="1280" height="720"></canvas>
+    <div class="wm" id="wm"></div>
+    <div class="status" id="status">DEMO CLIP &middot; 0 TRACKS</div>
+    <div class="topbtns">
+      <button class="cbtn" id="pauseBtn" title="pause">&#10073;&#10073;</button>
+      <button class="cbtn" id="fullBtn" title="maximize">&#10530;</button>
+    </div>
+    <div class="tips">&#9432; TIPS</div>
+  </div>
+</div>
+<input type="file" id="fileInput" accept="video/*">
+<video id="src" playsinline muted loop style="display:none"></video>
+<script>
+"use strict";
+const view=document.getElementById('view'), vctx=view.getContext('2d');
+const src=document.getElementById('src');
+const proc=document.createElement('canvas'), pctx=proc.getContext('2d',{willReadFrequently:true});
+const PW=160, PH=90; proc.width=PW; proc.height=PH;
+let prev=null, tracks=[], nextId=1, running=true, recording=false;
+let fx='basic', shape='square', invert=false, fusion=false, thresh=34, maxR=8, spd=1;
+let mode='demo', demoT=0, mediaRecorder=null, chunks=[];
+const SMOOTH=0.35;
+const wm=document.getElementById('wm');
+for(let y=-40;y<110;y+=18) for(let x=-20;x<110;x+=26){
+  const s=document.createElement('span'); s.textContent='Baby Track';
+  s.style.left=(x+(y%36?13:0))+'%'; s.style.top=y+'%'; wm.appendChild(s);
+}
+const demo=document.createElement('canvas'); demo.width=1280; demo.height=720;
+const dctx=demo.getContext('2d');
+function drawDemo(t){
+  dctx.fillStyle='#000'; dctx.fillRect(0,0,1280,720);
+  const blooms=[
+    {x:430+60*Math.sin(t*0.7), y:300+44*Math.cos(t*0.5), r:150, ph:0},
+    {x:870+70*Math.cos(t*0.4+1), y:380+50*Math.sin(t*0.6+2), r:170, ph:2}
+  ];
+  for(const b of blooms){
+    for(let p=0;p<6;p++){
+      const a=p*Math.PI/3 + t*0.35 + b.ph;
+      const px=b.x+Math.cos(a)*b.r*0.55, py=b.y+Math.sin(a)*b.r*0.42;
+      const g=dctx.createRadialGradient(px,py,4,px,py,b.r*0.52);
+      g.addColorStop(0,'rgba(240,215,80,0.95)'); g.addColorStop(0.55,'rgba(210,180,60,0.75)');
+      g.addColorStop(1,'rgba(120,100,30,0)');
+      dctx.fillStyle=g;
+      dctx.beginPath(); dctx.ellipse(px,py,b.r*0.5,b.r*0.3,a,0,7); dctx.fill();
+    }
+    const c=dctx.createRadialGradient(b.x,b.y,2,b.x,b.y,40);
+    c.addColorStop(0,'rgba(230,90,50,0.95)'); c.addColorStop(1,'rgba(230,90,50,0)');
+    dctx.fillStyle=c; dctx.beginPath(); dctx.arc(b.x,b.y,40,0,7); dctx.fill();
+  }
+  dctx.fillStyle='rgba(255,255,255,0.35)';
+  for(let i=0;i<26;i++){
+    const x=(i*197+t*(20+i*3))%1280, y=(i*331+40*Math.sin(t+i))%720;
+    dctx.fillRect(x,y,2,2);
+  }
+}
+function sourceCanvas(){
+  if(mode==='demo'){ demoT+=0.016*spd; drawDemo(demoT); return demo; }
+  return src;
+}
+function detect(canvas){
+  pctx.drawImage(canvas,0,0,PW,PH);
+  const d=pctx.getImageData(0,0,PW,PH).data;
+  if(!prev){ prev=new Float32Array(PW*PH); for(let i=0;i<PW*PH;i++) prev[i]=(d[i*4]+d[i*4+1]+d[i*4+2])/3; return []; }
+  const heat=new Float32Array(PW*PH);
+  for(let i=0;i<PW*PH;i++){
+    const g=(d[i*4]+d[i*4+1]+d[i*4+2])/3;
+    const diff=Math.abs(g-prev[i]); prev[i]=prev[i]*0.82+g*0.18;
+    if(diff>thresh) heat[i]=Math.min(diff/80,1);
+  }
+  // dilate heat so boxes enclose whole moving objects, not just motion edges
+  let cur=heat;
+  for(let d=0;d<3;d++){
+    const nxt=new Float32Array(PW*PH);
+    for(let y=0;y<PH;y++) for(let x=0;x<PW;x++){
+      const i=y*PW+x; let m=cur[i];
+      if(x>0&&cur[i-1]>m)m=cur[i-1]; if(x<PW-1&&cur[i+1]>m)m=cur[i+1];
+      if(y>0&&cur[i-PW]>m)m=cur[i-PW]; if(y<PH-1&&cur[i+PW]>m)m=cur[i+PW];
+      nxt[i]=m;
+    }
+    cur=nxt;
+  }
+  const heatD=cur;
+  const seen=new Uint8Array(PW*PH); const regions=[];
+  for(let i=0;i<PW*PH;i++){
+    if(heatD[i]<=0||seen[i]) continue;
+    const stack=[i]; seen[i]=1; let x0=PW,x1=0,y0=PH,y1=0,e=0,n=0;
+    while(stack.length){
+      const c=stack.pop(), cx=c%PW, cy=(c/PW)|0;
+      x0=Math.min(x0,cx); x1=Math.max(x1,cx); y0=Math.min(y0,cy); y1=Math.max(y1,cy);
+      e+=heatD[c]; n++;
+      const nb=[c-1,c+1,c-PW,c+PW];
+      for(const k of nb){
+        if(k<0||k>=PW*PH||seen[k]||heatD[k]<=0) continue;
+        if(Math.abs(k%PW-cx)>1) continue;
+        seen[k]=1; stack.push(k);
+      }
+    }
+    if(n>=8 && e>0.4) regions.push({x0,y0,x1,y1,e:e/n,n});
+  }
+  regions.sort((a,b)=>b.e*b.n-a.e*a.n);
+  return regions.slice(0,maxR);
+}
+function assignTracks(regs,W,H){
+  const sx=W/PW, sy=H/PH;
+  const cands=regs.map(r=>({
+    x:r.x0*sx-14, y:r.y0*sy-14, w:(r.x1-r.x0+1)*sx+28, h:(r.y1-r.y0+1)*sy+28,
+    e:r.e, cx:(r.x0+r.x1)/2*sx, cy:(r.y0+r.y1)/2*sy, used:false
+  }));
+  for(const t of tracks){
+    let best=null,bd=1e9;
+    for(const c of cands){ if(c.used) continue;
+      const d=(c.cx-t.cx)**2+(c.cy-t.cy)**2; if(d<bd){bd=d;best=c;} }
+    if(best && bd<48400){
+      best.used=true;
+      t.x+=(best.x-t.x)*SMOOTH; t.y+=(best.y-t.y)*SMOOTH;
+      t.w+=(best.w-t.w)*SMOOTH; t.h+=(best.h-t.h)*SMOOTH;
+      t.cx=t.x+t.w/2; t.cy=t.y+t.h/2; t.e=best.e; t.miss=0;
+    } else t.miss++;
+  }
+  for(const c of cands){ if(c.used) continue;
+    tracks.push({id:nextId++,x:c.x,y:c.y,w:c.w,h:c.h,cx:c.cx,cy:c.cy,e:c.e,miss:0});
+  }
+  tracks=tracks.filter(t=>t.miss<10);
+}
+function drawOverlay(ctx,t,W,H,time){
+  const pad=6, val=(t.e*2.857).toFixed(4);
+  ctx.save();
+  ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.fillStyle='rgba(255,255,255,0.9)';
+  ctx.lineWidth=1; ctx.font='11px ui-monospace,monospace'; ctx.setLineDash([]);
+  const x=t.x-pad,y=t.y-pad,w=t.w+pad*2,h=t.h+pad*2,cx=t.cx,cy=t.cy;
+  const circle=shape==='circle';
+  function rectPath(inset=0){
+    if(circle){ctx.beginPath();ctx.ellipse(cx,cy,Math.max(w/2-inset,2),Math.max(h/2-inset,2),0,0,7);}
+    else{ctx.beginPath();ctx.rect(x+inset,y+inset,w-inset*2,h-inset*2);}
+  }
+  switch(fx){
+    case 'basic': rectPath(); ctx.stroke(); ctx.fillText(val,x,y-5); break;
+    case 'cross': rectPath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx-16,cy); ctx.lineTo(cx+16,cy); ctx.moveTo(cx,cy-16); ctx.lineTo(cx,cy+16); ctx.stroke();
+      ctx.fillText(val,x,y-5); break;
+    case 'label': rectPath(); ctx.stroke();
+      ctx.fillRect(x,y-16,ctx.measureText('sub_'+String(t.id).padStart(2,'0')).width+12,14);
+      ctx.fillStyle='#000'; ctx.fillText('sub_'+String(t.id).padStart(2,'0'),x+6,y-5); break;
+    case 'frame': { const c=Math.min(w,h)*0.28; ctx.lineWidth=1.5; ctx.beginPath();
+      for(const [px,py,sx,sy] of [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]]){
+        ctx.moveTo(px+sx*c,py); ctx.lineTo(px,py); ctx.lineTo(px,py+sy*c);
+      } ctx.stroke(); ctx.fillText(val,x,y-5); break; }
+    case 'lframe': { const c=Math.min(w,h)*0.3; ctx.lineWidth=1.5; ctx.beginPath();
+      ctx.moveTo(x+c,y); ctx.lineTo(x,y); ctx.lineTo(x,y+c);
+      ctx.moveTo(x+w-c,y+h); ctx.lineTo(x+w,y+h); ctx.lineTo(x+w,y+h-c);
+      ctx.stroke(); ctx.fillText(val,x,y-5); break; }
+    case 'xframe': rectPath(); ctx.stroke(); ctx.beginPath();
+      ctx.moveTo(x,y); ctx.lineTo(x+w,y+h); ctx.moveTo(x+w,y); ctx.lineTo(x,y+h); ctx.stroke();
+      ctx.fillText(val,x,y-5); break;
+    case 'grid': rectPath(); ctx.stroke(); ctx.globalAlpha=0.5; ctx.beginPath();
+      for(let i=1;i<4;i++){ ctx.moveTo(x+w*i/4,y); ctx.lineTo(x+w*i/4,y+h); ctx.moveTo(x,y+h*i/4); ctx.lineTo(x+w,y+h*i/4);}
+      ctx.stroke(); ctx.globalAlpha=1; ctx.fillText(val,x,y-5); break;
+    case 'particle': { for(let i=0;i<14;i++){ const a=time*0.001+i*Math.PI*2/14;
+        const px=cx+Math.cos(a)*(w/2+6), py=cy+Math.sin(a)*(h/2+6);
+        ctx.fillRect(px-1.5,py-1.5,3,3); }
+      rectPath(); ctx.stroke(); ctx.fillText(val,x,y-5); break; }
+    case 'dash': ctx.setLineDash([6,5]); rectPath(); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillText(val,x,y-5); break;
+    case 'scope': { const r=Math.max(w,h)/2+8; ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx,cy,r*0.55,0,7); ctx.globalAlpha=0.6; ctx.stroke(); ctx.globalAlpha=1;
+      for(let i=0;i<12;i++){ const a=i*Math.PI/6;
+        ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);
+        ctx.lineTo(cx+Math.cos(a)*(r+6),cy+Math.sin(a)*(r+6)); ctx.stroke(); }
+      ctx.fillText(val,cx+8,cy-6); break; }
+    case 'win2k': rectPath(); ctx.stroke();
+      ctx.fillRect(x,y-16,w,14); ctx.strokeRect(x,y-16,w,14);
+      ctx.fillStyle='#000'; ctx.fillText('track_'+t.id+' - active',x+4,y-5);
+      ctx.fillRect(x+w-13,y-14,9,9); break;
+    case 'label2': rectPath(); ctx.stroke();
+      ctx.font='bold 13px ui-monospace,monospace';
+      ctx.fillText('TARGET '+String(t.id).padStart(2,'0'),x,y-20);
+      ctx.font='10px ui-monospace,monospace';
+      ctx.fillText('sig '+val+'  lock '+(100-t.miss*10)+'%',x,y-7); break;
+    case 'glow': ctx.shadowColor='rgba(255,255,255,0.8)'; ctx.shadowBlur=14; rectPath(); ctx.stroke();
+      ctx.shadowBlur=0; rectPath(); ctx.stroke(); ctx.fillText(val,x,y-5); break;
+    case 'backdrop': { ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H);
+      if(circle) ctx.ellipse(cx,cy,w/2,h/2,0,0,7,true); else ctx.rect(x,y,w,h);
+      ctx.fillStyle='rgba(0,0,0,0.72)'; ctx.fill('evenodd'); ctx.restore();
+      rectPath(); ctx.stroke(); ctx.fillText(val,x,y-5); break; }
+  }
+  if(fx!=='scope' && !circle){
+    for(const [hx,hy] of [[x,y],[x+w,y],[x,y+h],[x+w,y+h]]) ctx.fillRect(hx-2,hy-2,4,4);
+  }
+  ctx.restore();
+}
+function drawLinks(ctx){
+  ctx.save(); ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1; ctx.beginPath();
+  for(let i=0;i<tracks.length;i++) for(let j=i+1;j<tracks.length;j++){
+    const a=tracks[i],b=tracks[j];
+    if(Math.hypot(a.cx-b.cx,a.cy-b.cy)<420){ ctx.moveTo(a.cx,a.cy); ctx.lineTo(b.cx,b.cy); }
+  }
+  ctx.stroke(); ctx.restore();
+}
+function frame(){
+  const s=sourceCanvas();
+  let vw=1280,vh=720;
+  if(mode!=='demo' && src.videoWidth){ vw=src.videoWidth; vh=src.videoHeight; }
+  if(view.width!==vw||view.height!==vh){ view.width=vw; view.height=vh; }
+  if(running){
+    vctx.save();
+    let filter='none';
+    if(invert) filter='invert(1)';
+    if(fusion) filter=(invert?'invert(1) ':'')+'saturate(1.6) contrast(1.15)';
+    vctx.filter=filter;
+    vctx.drawImage(s,0,0,view.width,view.height);
+    vctx.restore(); vctx.filter='none';
+    const regs=detect(s);
+    assignTracks(regs,view.width,view.height);
+    drawLinks(vctx);
+    const now=performance.now();
+    for(const t of tracks) drawOverlay(vctx,t,view.width,view.height,now);
+    document.getElementById('status').textContent=
+      (mode==='demo'?'DEMO CLIP':mode==='cam'?'CAMERA':'VIDEO')+' \u00B7 '+tracks.length+' TRACKS'+(recording?' \u00B7 REC':'');
+  }
+  requestAnimationFrame(frame);
+}
+document.querySelectorAll('.fx').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.fx').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); fx=b.dataset.fx;
+});
+document.querySelectorAll('.shape').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.shape').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); shape=b.dataset.sh;
+});
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.spd').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); spd=+b.dataset.s; src.playbackRate=spd;
+});
+document.querySelectorAll('.filt').forEach(b=>b.onclick=()=>{
+  b.classList.toggle('on');
+  if(b.dataset.fl==='invert') invert=b.classList.contains('on'); else fusion=b.classList.contains('on');
+});
+document.getElementById('thresh').oninput=e=>{thresh=+e.target.value;document.getElementById('threshVal').textContent=thresh;};
+document.getElementById('maxr').oninput=e=>{maxR=+e.target.value;document.getElementById('maxrVal').textContent=maxR;};
+document.getElementById('uploadBtn').onclick=()=>document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  src.src=URL.createObjectURL(f); mode='video'; tracks=[]; prev=null;
+  src.playbackRate=spd; src.play();
+};
+document.getElementById('demoBtn').onclick=()=>{ mode='demo'; tracks=[]; prev=null; src.pause(); };
+document.getElementById('camBtn').onclick=async()=>{
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:true});
+    src.srcObject=stream; mode='cam'; tracks=[]; prev=null; src.play();
+  }catch(e){ document.getElementById('status').textContent='CAMERA DENIED'; }
+};
+document.getElementById('pauseBtn').onclick=()=>{ running=!running; if(mode!=='demo'){ running?src.play():src.pause(); } };
+document.getElementById('fullBtn').onclick=()=>{
+  if(document.fullscreenElement) document.exitFullscreen();
+  else document.querySelector('.stage').requestFullscreen();
+};
+document.getElementById('exportBtn').onclick=()=>{
+  if(recording){ mediaRecorder.stop(); return; }
+  const stream=view.captureStream(30);
+  chunks=[];
+  mediaRecorder=new MediaRecorder(stream,{mimeType:'video/webm'});
+  mediaRecorder.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+  mediaRecorder.onstop=()=>{
+    recording=false; document.getElementById('exportBtn').innerHTML='&#8681; Export WebM';
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob(chunks,{type:'video/webm'}));
+    a.download='babytrack.webm'; a.click();
+  };
+  mediaRecorder.start(); recording=true;
+  document.getElementById('exportBtn').innerHTML='&#9632; Stop &amp; Save';
+};
+const qp=new URLSearchParams(location.search);
+if(qp.get('fx')&&document.querySelector(`[data-fx="${qp.get('fx')}"]`)){
+  document.querySelectorAll('.fx').forEach(x=>x.classList.remove('on'));
+  document.querySelector(`[data-fx="${qp.get('fx')}"]`).classList.add('on'); fx=qp.get('fx');
+}
+if(qp.get('shape')){ shape=qp.get('shape'); }
+frame();
+</script>
+</body>
+</html>
